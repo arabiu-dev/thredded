@@ -7,51 +7,6 @@ module Thredded
     after_action :verify_authorized, except: %i[index]
     after_action :verify_policy_scoped, except: %i[new create edit update destroy]
 
-    # def index
-    #   messageboards_scope = policy_scope(Thredded::Messageboard.all)
-    #   @groups = Thredded::MessageboardGroupView.grouped(
-    #     messageboards_scope,
-    #     user: thredded_current_user
-    #   )
-
-    #   respond_to do |format|
-    #     format.html
-    #     format.json do
-    #       render json: {
-    #         groups: @groups.map(&:as_json)
-    #       }
-    #     end
-    #   end
-    # end
-
-    # def index
-    #   messageboards_scope = policy_scope(Thredded::Messageboard.all)
-    #   @groups = Thredded::MessageboardGroupView.grouped(
-    #     messageboards_scope,
-    #     user: thredded_current_user
-    #   )
-
-    #   respond_to do |format|
-    #     format.html # Normal HTML response
-    #     format.json do
-    #       # Adjust @groups specifically for JSON response to include ungrouped messageboards
-    #       all_groups = Thredded::MessageboardGroup.order(:position, :id).to_a
-    #       ungrouped_messageboards = messageboards_scope.where(messageboard_group_id: nil)
-
-    #       # Create a default group for ungrouped messageboards if there are any
-    #       unless ungrouped_messageboards.empty?
-    #         default_group = Thredded::MessageboardGroup.new(id: nil, name: "General Discussion", emoji: "🗨️")
-    #         @groups += [Thredded::MessageboardGroupView.new(default_group, ungrouped_messageboards)]
-    #       end
-
-    #       # Render JSON including possibly adjusted groups
-    #       render json: {
-    #         groups: @groups.map(&:as_json)
-    #       }
-    #     end
-    #   end
-    # end
-
     def index
       # Scoped messageboards for regular usage
       scoped_messageboards = policy_scope(Thredded::Messageboard.all)
