@@ -23,6 +23,18 @@ module Thredded
       @policy = policy
     end
 
+    def as_json(options = {})
+      super(options).merge(
+        policy: policy_as_json
+      )
+    end
+
+    def policy_as_json
+      {
+        messageboard_policy: @policy.messageboard_policy.as_json()
+      }
+    end
+
     def states
       [@read_state.read? ? :read : :unread]
     end

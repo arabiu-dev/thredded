@@ -14,17 +14,17 @@ module Thredded
     def run
       Thredded::Messageboard.transaction do
         fail ActiveRecord::Rollback unless @messageboard.save
-        topic = Thredded::Topic.create!(
-          messageboard: @messageboard,
-          user: @user,
-          title: first_topic_title
-        )
-        Thredded::Post.create!(
-          messageboard: @messageboard,
-          user: @user,
-          postable: topic,
-          content: first_topic_content
-        )
+        # topic = Thredded::Topic.create!(
+        #   messageboard: @messageboard,
+        #   user: @user,
+        #   title: first_topic_title
+        # )
+        # Thredded::Post.create!(
+        #   messageboard: @messageboard,
+        #   user: @user,
+        #   postable: topic,
+        #   content: first_topic_content
+        # )
         true
       end
     end

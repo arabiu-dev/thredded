@@ -33,7 +33,7 @@ module Thredded
     def messageboard_group_params
       params
         .require(:messageboard_group)
-        .permit(:name)
+        .permit(:name, :emoji)
     end
   end
 end

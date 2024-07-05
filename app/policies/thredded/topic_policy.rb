@@ -26,6 +26,10 @@ module Thredded
       @messageboard_policy = Thredded::MessageboardPolicy.new(user, topic.messageboard)
     end
 
+    def messageboard_policy
+      @messageboard_policy
+    end
+
     def create?
       @messageboard_policy.post?
     end

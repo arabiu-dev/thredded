@@ -51,6 +51,9 @@ Thredded::Engine.routes.draw do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  get 'topics/all', to: 'topics#index'
+  get 'topics/all/:messageboard_group_id', to: 'topics#index'
+
   resources :topics, path: '', only: [] do
     collection do
       get '/unread', action: :unread, as: :unread

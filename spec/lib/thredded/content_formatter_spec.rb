@@ -56,9 +56,9 @@ describe Thredded::ContentFormatter do
       sam = build_stubbed(:user, name: 'sam 1')
       joe = build_stubbed(:user, name: 'joe')
       post = build_stubbed(:post, content: post_content)
-      expected_html = '<p><a href="/whois/sam%201">@"sam 1"</a> and <a href="/whois/joe">@joe</a>. But not @unknown, '\
-'<a href="mailto:email@jane.com">email@jane.com</a>, <a href="mailto:email@joe.com">email@joe.com</a>,'\
-' <code>@joe</code>.</p>'
+      expected_html = '<p><a href="/whois/sam%201">@"sam 1"</a> and <a href="/whois/joe">@joe</a>. But not @unknown, ' \
+'<a href="mailto:email@jane.com">email@jane.com</a>, <a href="mailto:email@joe.com">email@joe.com</a>, ' \
+'<code>@joe</code>.</p>'
 
       expect(::Thredded::UsersProvider).to receive(:call)
         .with(['sam 1', 'joe', 'unknown'], kind_of(ActiveRecord::Relation))

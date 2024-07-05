@@ -19,18 +19,37 @@ module Thredded
       authorize_creating @post_form.post
     end
 
+
     def create
       @post_form = Thredded::PostForm.new(
-        user: thredded_current_user, topic: parent_topic, post_params: new_post_params
+        user: thredded_current_user, 
+        topic: parent_topic, 
+        post_params: new_post_params
       )
       authorize_creating @post_form.post
-
-      if @post_form.save
-        redirect_to post_path(@post_form.post, user: thredded_current_user)
-      else
-        render :new
+    
+      respond_to do |format|
+        if @post_form.save
+          format.html { redirect_to post_path(@post_form.post, user: thredded_current_user) }
+          format.json { 
+            render json: { 
+              post: @post_form.post.as_json(
+                include: {
+                  user: {
+                    only: [:id, :first_name, :last_name, :avatar_url]  # Adjust attributes as necessary
+                  }
+                }
+              ) 
+            }, status: :created, location: post_path(@post_form.post, user: thredded_current_user) 
+          }
+        else
+          format.html { render :new }
+          format.json { render json: @post_form.errors, status: :unprocessable_entity }
+        end
       end
     end
+    
+    
 
     def edit
       @post_form = Thredded::PostForm.for_persisted(post)
@@ -41,18 +60,29 @@ module Thredded
 
     def update
       authorize post, :update?
-      post.update(new_post_params)
-
-      redirect_to post_path(post, user: thredded_current_user)
+      if post.update(new_post_params)
+        respond_to do |format|
+          format.html { redirect_to post_path(post, user: thredded_current_user) }
+          format.json { render json: post, status: :ok }
+        end
+      else
+        respond_to do |format|
+          format.html { render :edit }
+          format.json { render json: post.errors, status: :unprocessable_entity }
+        end
+      end
     end
-
+    
     def destroy
       authorize post, :destroy?
       post.destroy!
-
-      redirect_back fallback_location: topic_url(topic),
-                    notice: I18n.t('thredded.posts.deleted_notice')
+    
+      respond_to do |format|
+        format.html { redirect_back fallback_location: topic_url(topic), notice: I18n.t('thredded.posts.deleted_notice') }
+        format.json { head :no_content }
+      end
     end
+    
 
     def mark_as_read
       authorize post, :read?
@@ -74,6 +104,7 @@ module Thredded
 
     def quote
       authorize_reading post
+      p Thredded::ContentFormatter.quote_content(post.content)
       render plain: Thredded::ContentFormatter.quote_content(post.content)
     end
 

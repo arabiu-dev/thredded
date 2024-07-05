@@ -177,6 +177,17 @@ module Thredded
       Thredded.slugifier.call(input.to_s)
     end
 
+    def first_post
+      posts.order(:created_at).first
+    end
+
+    def as_json(options = {})
+      super(options).merge(
+        first_post: first_post&.as_json(include: { user: { except: [:interaction_summary, :industries, :skills,
+                                                                    :expert_in] } })
+      )
+    end
+
     private
 
     def slug_candidates

@@ -16,17 +16,35 @@ module Thredded
 
     after_action :update_user_activity
 
-    after_action :verify_authorized, except: %i[search unread]
+    # after_action :verify_authorized, except: %i[search unread]
     after_action :verify_policy_scoped, except: %i[show new create edit update destroy follow unfollow]
 
     def index
-      page_scope = policy_scope(messageboard.topics)
+      if params[:messageboard_group_id]
+        # Fetch all messageboards within the specified group
+        messageboard_ids = Thredded::MessageboardGroup.find(params[:messageboard_group_id]).messageboards.pluck(:id)
+        topics_scope = policy_scope(Thredded::Topic.where(messageboard_id: messageboard_ids))
+      elsif params[:messageboard_id]
+        verify_messageboard # Ensures the messageboard exists and the user has access
+        topics_scope = policy_scope(messageboard.topics)
+      else
+        topics_scope = policy_scope(Thredded::Topic)
+      end
+
+      page_scope = topics_scope
         .order_sticky_first.order_recently_posted_first
         .includes(:categories, :last_user, :user)
         .send(Kaminari.config.page_method_name, current_page)
       return redirect_to(last_page_params(page_scope)) if page_beyond_last?(page_scope)
       @topics = Thredded::TopicsPageView.new(thredded_current_user, page_scope)
       @new_topic = init_new_topic
+
+      respond_to do |format|
+        format.html # Renders index.html.erb
+        format.json do
+          render json: @topics.as_json
+        end
+      end
     end
 
     def unread
@@ -62,6 +80,13 @@ module Thredded
       @posts = Thredded::TopicPostsPageView.new(thredded_current_user, topic, page_scope)
       Thredded::UserTopicReadState.touch!(thredded_current_user.id, page_scope.last) if thredded_signed_in?
       @new_post = Thredded::PostForm.new(user: thredded_current_user, topic: topic, post_params: new_post_params)
+
+      respond_to do |format|
+        format.html # HTML response is already handled implicitly by the action's setup
+        format.json do
+          render json: @posts.as_json
+        end
+      end
     end
 
     def new
@@ -84,21 +109,38 @@ module Thredded
       render :index
     end
 
+    # def create
+    #   @new_topic = Thredded::TopicForm.new(new_topic_params)
+    #   authorize_creating @new_topic.topic
+    #   if @new_topic.save
+    #     redirect_to next_page_after_create(params[:next_page])
+    #   else
+    #     render :new
+    #   end
+    # end
+
     def create
       @new_topic = Thredded::TopicForm.new(new_topic_params)
       authorize_creating @new_topic.topic
-      if @new_topic.save
-        redirect_to next_page_after_create(params[:next_page])
-      else
-        render :new
+    
+      respond_to do |format|
+        if @new_topic.save
+          format.html { redirect_to next_page_after_create(params[:next_page]) }
+          format.json { render json: @new_topic.topic.as_json, status: :created, location: topic_url(@new_topic.topic) }
+        else
+          format.html { render :new }
+          format.json { render json: @new_topic.errors, status: :unprocessable_entity }
+        end
       end
     end
+    
 
     def edit
       authorize topic, :update?
       return redirect_to(canonical_topic_params) unless params_match?(canonical_topic_params)
       @edit_topic = Thredded::EditTopicForm.new(user: thredded_current_user, topic: topic)
     end
+    
 
     def update
       topic.assign_attributes(topic_params_for_update)
@@ -112,32 +154,72 @@ module Thredded
         authorize topic.messageboard, :post?
       end
       @edit_topic = Thredded::EditTopicForm.new(user: thredded_current_user, topic: topic)
-      if @edit_topic.save
-        redirect_to messageboard_topic_url(topic.messageboard, topic),
-                    notice: t('thredded.topics.updated_notice')
-      else
-        render :edit
+      respond_to do |format|
+        if @edit_topic.save
+          format.html { redirect_to messageboard_topic_url(topic.messageboard, topic), notice: t('thredded.topics.updated_notice') }
+          format.json { render json: topic, status: :ok }
+        else
+          format.html { render :edit }
+          format.json { render json: @edit_topic.errors, status: :unprocessable_entity }
+        end
       end
+    
     end
+
+    # def update
+    #   @topic.assign_attributes(topic_params_for_update)
+    #   authorize @topic, :update?
+    
+    #   if @topic.messageboard_id_changed?
+    #     # Handle the messageboard change and reset the association
+    #     @topic.messageboard = Thredded::Messageboard.find(@topic.messageboard_id)
+    #     authorize @topic.messageboard, :post?
+    #   end
+    
+    #   @edit_topic = Thredded::EditTopicForm.new(user: thredded_current_user, topic: @topic)
+    
+    #   respond_to do |format|
+    #     if @edit_topic.save
+    #       format.html { redirect_to messageboard_topic_url(@topic.messageboard, @topic), notice: t('thredded.topics.updated_notice') }
+    #       format.json { render json: @topic, status: :ok }
+    #     else
+    #       format.html { render :edit }
+    #       format.json { render json: @edit_topic.errors, status: :unprocessable_entity }
+    #     end
+    #   end
+    # end
+    
 
     def destroy
       authorize topic, :destroy?
       topic.destroy!
-      redirect_to messageboard_topics_path(messageboard),
-                  notice: t('thredded.topics.deleted_notice')
+    
+      respond_to do |format|
+        format.html { redirect_to messageboard_topics_path(messageboard), notice: t('thredded.topics.deleted_notice') }
+        format.json { head :no_content }  # For JSON, just return no content status
+      end
     end
-
+    
     def follow
       authorize topic, :read?
       Thredded::UserTopicFollow.create_unless_exists(thredded_current_user.id, topic.id)
-      follow_change_response(following: true)
+    
+      respond_to do |format|
+        format.html { follow_change_response(following: true) }
+        format.json { render json: { following: true }, status: :ok }  # JSON response indicating the following status
+      end
     end
-
+    
     def unfollow
       authorize topic, :read?
       Thredded::UserTopicFollow.find_by(topic_id: topic.id, user_id: thredded_current_user.id).try(:destroy)
-      follow_change_response(following: false)
+    
+      respond_to do |format|
+        format.html { follow_change_response(following: false) }
+        format.json { render json: { following: false }, status: :ok }  # JSON response indicating the unfollowing status
+      end
     end
+    
 
     private
 

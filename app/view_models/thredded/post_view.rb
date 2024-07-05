@@ -30,6 +30,20 @@ module Thredded
       @first_in_page = first_in_page
     end
 
+ 
+
+  def as_json(options = {})
+    {
+      first_in_page: @first_in_page,
+      first_unread_in_page: @first_unread_in_page,
+      post: @post.as_json( include: {
+        user: {only: [:first_name, :last_name, :avatar_url, :job_title]}
+      }),
+      # user: @post.user.as_json(only: [:id, :name, :avatar_url]),  # Assuming `avatar_url` is a field you want to include
+      # messageboard: @post.messageboard.as_json(only: [:id, :name])
+    }
+  end
+
     def can_reply?
       @can_reply ||= @policy.create?
     end

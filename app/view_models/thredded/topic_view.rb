@@ -32,6 +32,28 @@ module Thredded
       ].compact
     end
 
+    def as_json(options = {})
+      {
+        topic: @topic.as_json( include: {
+          user: {only: [:first_name, :last_name, :full_name, :avatar_url, :job_title, :id]}
+        }),
+        url_path: build_url_path,
+        follow: @follow.as_json,
+      }
+    end
+
+    def build_url_path
+      # Build the URL path using available slugs
+      # Ensure that each model has a 'slug' field and that relationships are set up to access these
+      topic_slug = @topic.slug
+      messageboard_slug = @topic.messageboard&.slug
+      messageboard_group_name = @topic.messageboard&.group&.name
+
+      # Construct the URL path based on the application's routing scheme
+      # This example assumes a nested routing structure: /groups/:group_slug/messageboards/:messageboard_slug/topics/:topic_slug
+      "/channel/#{messageboard_slug}/#{topic_slug}?channel=#{messageboard_group_name}"
+    end
+
     # @return [Boolean] whether the topic is followed by the current user.
     def followed?
       !!@follow # rubocop:disable Style/DoubleNegation

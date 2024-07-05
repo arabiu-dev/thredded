@@ -28,6 +28,12 @@ module Thredded
       end
     end
 
+    def as_json(options = {})
+      {
+        topics: @topic_views.as_json(options)
+      }
+    end
+
     protected
 
     def refine_scope(topics_page_scope)

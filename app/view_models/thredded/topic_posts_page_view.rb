@@ -38,5 +38,12 @@ module Thredded
         post_view
       end
     end
+
+    def as_json(options = {})
+      {
+        topic: @topic.as_json(only: [:id, :title]),  # Include only id and title for topic
+        posts: @post_views.as_json
+      }
+    end
   end
 end

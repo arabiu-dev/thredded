@@ -34,7 +34,7 @@ module Thredded
       result.uniq!
       result.compact!
       Rails.logger.info(
-        "  [Thredded::UsersProviderWithCache] #{names.size} user names => #{result.size} users "\
+        "  [Thredded::UsersProviderWithCache] #{names.size} user names => #{result.size} users " \
           "(#{cached.size} cached, #{uncached.size} uncached)"
       )
       result
